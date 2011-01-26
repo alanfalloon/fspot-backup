@@ -4,6 +4,7 @@
 """
 
 import sys, os
+import urllib
 
 try:
     dest_path = sys.argv[1]
@@ -17,7 +18,7 @@ os.chdir(dest_path)
 # get the DB
 home=os.environ.get('HOME',None)
 
-os.spawnlp(os.P_WAIT, 'cp', 'cp', os.path.join(home,'.gnome2','f-spot','photos.db'), 'fspot.db')
+os.spawnlp(os.P_WAIT, 'cp', 'cp', os.path.join(home,'.config','f-spot','photos.db'), 'fspot.db')
 
 print "copied F-Spot database"
 
@@ -32,22 +33,22 @@ def backup_photo(uri):
     "Backup the photo, return the new uri"
     global photonum
     if not uri.startswith("file://"): raise ValueError, uri
-    oldname=uri[7:]
+    oldname=urllib.unquote(uri[7:])
     suffix=uri[uri.rfind('.'):]
     newname="photo%04d%s" % (photonum,suffix)
     photonum+=1
     if os.spawnlp(os.P_WAIT, 'cp', 'cp', '-l', oldname, newname): raise ValueError, (oldname,newname)
-    return 'file://'+newname
-c.execute('''select id, uri from photos''')
-new_photos = [(id, backup_photo(uri)) for id,uri in c]
-c.execute('''select photo_id, version_id, uri from photo_versions where version_id <> 1''')
-new_versions = [(pid, vid, backup_photo(uri)) for pid,vid,uri in c]
-for id, uri in new_photos:
-    c.execute("update photos set uri=? where id=?",(uri,id))
-for id, uri in new_photos:
-    c.execute("update photo_versions set uri=? where photo_id=? and version_id=1 ",(uri,id))
-for pid, vid, uri in new_versions:
-    c.execute("update photo_versions set uri=? where photo_id=? and version_id=? ",(uri,pid,vid))
+    return ('file://',newname)
+c.execute('''select id, base_uri, filename from photos''')
+new_photos = [(id, backup_photo(uri+fn)) for id,uri,fn in c]
+c.execute('''select photo_id, version_id, base_uri, filename from photo_versions where version_id <> 1''')
+new_versions = [(pid, vid, backup_photo(uri+fn)) for pid,vid,uri,fn in c]
+for id, (uri, fn) in new_photos:
+    c.execute("update photos set base_uri=?, filename=? where id=?",(uri,fn,id))
+for id, (uri, fn) in new_photos:
+    c.execute("update photo_versions set base_uri=?, filename=? where photo_id=? and version_id=1 ",(uri,fn,id))
+for pid, vid, (uri, fn) in new_versions:
+    c.execute("update photo_versions set base_uri=?, filename=? where photo_id=? and version_id=? ",(uri,fn,pid,vid))
     
 
 db.commit()
