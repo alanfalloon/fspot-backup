@@ -18,11 +18,12 @@ os.chdir(backup_path)
 # get the DB
 home=os.environ.get('HOME',None)
 
-os.spawnlp(os.P_WAIT, 'cp', 'cp', 'fspot.db', 'fspot-restored.db')
+newdbfilename = os.path.join(dest_prefix,'fspot-restored.db')
+os.spawnlp(os.P_WAIT, 'cp', 'cp', 'fspot.db', newdbfilename)
 
 from pysqlite2 import dbapi2 as sqlite3
 
-db = sqlite3.connect('fspot-restored.db')
+db = sqlite3.connect(newdbfilename)
 c = db.cursor()
 
 def backup_photo(uri):
@@ -52,6 +53,5 @@ for pid, vid, uri in new_versions:
 db.commit()
 db.close()
 
-os.spawnlp(os.P_WAIT, 'cp', 'cp', 'fspot-restored.db', os.path.join(home,'.gnome2','f-spot','photos.db'))
-
-print "restored F-Spot database"
+print """To complete the restoration, run the following command:
+cp %s ~/.config/f-spot/photos.db""" % (newdbfilename,)
