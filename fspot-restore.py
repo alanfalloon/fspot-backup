@@ -30,6 +30,11 @@ def backup_photo(uri):
     if not uri.startswith("file://"): raise ValueError, uri
     oldname=uri[7:]
     newname=os.path.join(dest_prefix,oldname)
+    (newdirname,newbasename)=os.path.split(newname)
+    if newdirname:
+        newdirname = newdirname+"/"
+        if os.spawnlp(os.P_WAIT, 'mkdir', 'mkdir', '-p', newdirname):
+            raise ValueError, newdirname
     if os.spawnlp(os.P_WAIT, 'cp', 'cp', '-l', oldname, newname): raise ValueError, (oldname,newname)
     return 'file://'+newname
 c.execute('''select id, uri from photos''')
