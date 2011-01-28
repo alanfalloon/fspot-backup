@@ -37,17 +37,17 @@ def backup_photo(uri):
         if os.spawnlp(os.P_WAIT, 'mkdir', 'mkdir', '-p', newdirname):
             raise ValueError, newdirname
     if os.spawnlp(os.P_WAIT, 'cp', 'cp', '-l', oldname, newname): raise ValueError, (oldname,newname)
-    return 'file://'+newname
-c.execute('''select id, uri from photos''')
-new_photos = [(id, backup_photo(uri)) for id,uri in c]
-c.execute('''select photo_id, version_id, uri from photo_versions where version_id <> 1''')
-new_versions = [(pid, vid, backup_photo(uri)) for pid,vid,uri in c]
-for id, uri in new_photos:
-    c.execute("update photos set uri=? where id=?",(uri,id))
-for id, uri in new_photos:
-    c.execute("update photo_versions set uri=? where photo_id=? and version_id=1 ",(uri,id))
-for pid, vid, uri in new_versions:
-    c.execute("update photo_versions set uri=? where photo_id=? and version_id=? ",(uri,pid,vid))
+    return ('file://'+newdirname, newbasename)
+c.execute('''select id, base_uri, filename from photos''')
+new_photos = [(id, backup_photo(uri+fn)) for id,uri,fn in c]
+c.execute('''select photo_id, version_id, base_uri, filename from photo_versions where version_id <> 1''')
+new_versions = [(pid, vid, backup_photo(uri+fn)) for pid,vid,uri,fn in c]
+for id, (uri, fn) in new_photos:
+    c.execute("update photos set base_uri=?, filename=? where id=?",(uri,fn,id))
+for id, (uri, fn) in new_photos:
+    c.execute("update photo_versions set base_uri=?, filename=? where photo_id=? and version_id=1 ",(uri,fn,id))
+for pid, vid, (uri, fn) in new_versions:
+    c.execute("update photo_versions set base_uri=?, filename=? where photo_id=? and version_id=? ",(uri,fn,pid,vid))
     
 
 db.commit()
